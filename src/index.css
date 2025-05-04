@@ -1,0 +1,147 @@
+
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
+
+    @layer base {
+      :root {
+        --background: 210 20% 98%; /* Light cool gray */
+        --foreground: 215 25% 25%; /* Dark grayish blue */
+        --card: 0 0% 100%;
+        --card-foreground: 215 25% 25%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 215 25% 25%;
+        --primary: 170 60% 45%; /* Vibrant Teal */
+        --primary-light: 170 60% 55%;
+        --primary-dark: 170 65% 38%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 210 15% 94%; /* Lighter cool gray */
+        --secondary-foreground: 215 15% 40%;
+        --muted: 210 15% 94%;
+        --muted-foreground: 210 10% 55%;
+        --accent: 30 90% 60%; /* Accent Orange */
+        --accent-foreground: 0 0% 100%;
+        --destructive: 0 70% 55%; /* Red */
+        --destructive-foreground: 0 0% 100%;
+        --border: 210 15% 88%;
+        --input: 210 15% 88%;
+        --ring: 170 60% 45%; /* Teal for focus rings */
+        --radius: 0.375rem; /* Slightly smaller radius */
+      }
+
+      .dark {
+        --background: 220 18% 12%; /* Dark Blue-Gray */
+        --foreground: 210 20% 95%;
+        --card: 220 15% 18%;
+        --card-foreground: 210 20% 95%;
+        --popover: 220 15% 18%;
+        --popover-foreground: 210 20% 95%;
+        --primary: 170 55% 55%; /* Brighter Teal for dark mode */
+        --primary-light: 170 55% 65%;
+        --primary-dark: 170 60% 45%;
+        --primary-foreground: 220 15% 10%;
+        --secondary: 220 15% 25%; /* Darker secondary */
+        --secondary-foreground: 210 15% 80%;
+        --muted: 220 15% 25%;
+        --muted-foreground: 210 10% 65%;
+        --accent: 30 80% 65%; /* Brighter Orange for dark mode */
+        --accent-foreground: 220 15% 10%;
+        --destructive: 0 60% 60%; /* Brighter Red */
+        --destructive-foreground: 0 0% 100%;
+        --border: 220 15% 30%;
+        --input: 220 15% 30%;
+        --ring: 170 55% 55%;
+      }
+    }
+
+    @layer base {
+      * {
+        @apply border-border;
+      }
+      body {
+        @apply bg-background text-foreground font-sans antialiased;
+        font-family: 'Inter', sans-serif;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        @apply font-semibold tracking-tight;
+      }
+      p {
+        @apply leading-relaxed;
+      }
+      /* More compact inputs/buttons */
+      .compact-input {
+        @apply h-9 px-3 py-1 text-sm;
+      }
+      .compact-button {
+        @apply h-9 px-3 py-1 text-sm;
+      }
+    }
+
+    @layer components {
+      .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* More compact grid */
+        gap: 1rem; /* Smaller gap */
+      }
+
+      .product-card {
+        @apply bg-card rounded-md overflow-hidden border transition-shadow duration-200 ease-in-out shadow-subtle hover:shadow-lg;
+      }
+      
+      .nav-link {
+        position: relative;
+        @apply px-1 py-2; /* Adjust padding */
+      }
+
+      .nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0px; /* Closer underline */
+        left: 0;
+        width: 0;
+        height: 2px;
+        background-color: hsl(var(--primary));
+        transition: width 0.2s ease;
+      }
+
+      .nav-link:hover::after, .nav-link.active::after {
+        width: 100%;
+      }
+
+      .cart-badge {
+        position: absolute;
+        top: -5px; /* Adjusted position */
+        right: -5px;
+        background-color: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
+        border-radius: 50%;
+        width: 18px; /* Slightly smaller */
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem; /* Smaller font */
+        font-weight: 600;
+      }
+
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: hsl(var(--secondary));
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: hsl(var(--muted-foreground) / 0.5);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: hsl(var(--muted-foreground) / 0.7);
+      }
+    }
+
+    /* Add Inter font */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  
