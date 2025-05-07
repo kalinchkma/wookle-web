@@ -13,7 +13,9 @@
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
           >
-            <AlertTriangle className="h-24 w-24 text-shopzone mb-6" />
+            <div className="flex items-center justify-center">
+              <AlertTriangle className="h-24 w-24 text-shopzone mb-6" />
+            </div>
             <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
             <h2 className="text-3xl font-semibold text-gray-700 mb-4">Page Not Found</h2>
             <p className="text-lg text-gray-500 mb-8 max-w-md mx-auto">
