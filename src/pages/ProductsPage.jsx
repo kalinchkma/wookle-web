@@ -1,292 +1,333 @@
 
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { useLocation } from "react-router-dom";
-import { Filter, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import ProductGrid from "@/components/ProductGrid";
-import CategoryFilter from "@/components/CategoryFilter";
-import PriceFilter from "@/components/PriceFilter";
-import RatingFilter from "@/components/RatingFilter";
-import { useProducts } from "@/contexts/ProductContext";
-import { sampleCategories } from "@/data/sampleData";
+    import React, { useState, useEffect, useMemo } from "react";
+    import { motion, AnimatePresence } from "framer-motion";
+    import { useLocation, useNavigate } from "react-router-dom";
+    import { Filter, Search as SearchIcon, X } from "lucide-react";
+    import { Button } from "@/components/ui/button";
+    import { Input } from "@/components/ui/input";
+    import ProductGrid from "@/components/ProductGrid";
+    import ProductFilters from "@/components/products/ProductFilters";
+    import ProductSorting from "@/components/products/ProductSorting";
+    import MobileFilterDrawer from "@/components/products/MobileFilterDrawer";
+    import { useProducts } from "@/contexts/ProductContext";
+    import { Loader2 } from "lucide-react";
+    import { cn } from "@/lib/utils";
 
-const ProductsPage = () => {
-  const location = useLocation();
-  const { products, loading } = useProducts();
-  
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 200]);
-  const [selectedRating, setSelectedRating] = useState(0);
-  const [sortBy, setSortBy] = useState("featured");
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  
-  const maxPrice = 200; // Set a reasonable max price for the slider
-  
-  // Parse query parameters on initial load
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    
-    const category = params.get("category");
-    if (category) {
-      setSelectedCategories([parseInt(category)]);
-    }
-    
-    const query = params.get("q");
-    if (query) {
-      setSearchQuery(query);
-    }
-  }, [location.search]);
-  
-  // Apply filters whenever filter state changes
-  useEffect(() => {
-    if (loading) return;
-    
-    let result = [...products];
-    
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(product => 
-        product.name.toLowerCase().includes(query) || 
-        product.description.toLowerCase().includes(query)
-      );
-    }
-    
-    // Apply category filter
-    if (selectedCategories.length > 0) {
-      const categoryNames = selectedCategories.map(id => {
-        const category = sampleCategories.find(c => c.id === id);
-        return category ? category.name : null;
-      }).filter(Boolean);
+    const MAX_PRICE = 1000; 
+
+    const ProductsPage = () => {
+      const location = useLocation();
+      const navigate = useNavigate();
+      const { products, categories: globalCategories, loading } = useProducts(); 
       
-      if (categoryNames.length > 0) {
-        result = result.filter(product => categoryNames.includes(product.category));
-      }
-    }
-    
-    // Apply price filter
-    result = result.filter(product => 
-      product.price >= priceRange[0] && product.price <= priceRange[1]
-    );
-    
-    // Apply rating filter
-    if (selectedRating > 0) {
-      result = result.filter(product => product.rating >= selectedRating);
-    }
-    
-    // Apply sorting
-    switch (sortBy) {
-      case "price-low":
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case "price-high":
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case "newest":
-        result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        break;
-      case "rating":
-        result.sort((a, b) => b.rating - a.rating);
-        break;
-      case "featured":
-      default:
-        // Featured products first, then sort by rating
-        result.sort((a, b) => {
-          if (a.featured && !b.featured) return -1;
-          if (!a.featured && b.featured) return 1;
-          return b.rating - a.rating;
-        });
-        break;
-    }
-    
-    setFilteredProducts(result);
-  }, [products, loading, searchQuery, selectedCategories, priceRange, selectedRating, sortBy]);
-  
-  const handleCategoryChange = (categoryId) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(categoryId)) {
-        return prev.filter(id => id !== categoryId);
-      } else {
-        return [...prev, categoryId];
-      }
-    });
-  };
-  
-  const handleRatingChange = (rating) => {
-    setSelectedRating(prev => prev === rating ? 0 : rating);
-  };
-  
-  const handleClearFilters = () => {
-    setSearchQuery("");
-    setSelectedCategories([]);
-    setPriceRange([0, maxPrice]);
-    setSelectedRating(0);
-    setSortBy("featured");
-  };
-  
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-12 h-12 border-4 border-shopzone border-t-transparent rounded-full"
-        />
-      </div>
-    );
-  }
-  
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Products</h1>
+      const [filteredProducts, setFilteredProducts] = useState([]);
+      const [searchQuery, setSearchQuery] = useState("");
+      const [localSearchQuery, setLocalSearchQuery] = useState("");
+      const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+      const [selectedCategories, setSelectedCategories] = useState([]);
+      const [priceRange, setPriceRange] = useState([0, MAX_PRICE]);
+      const [selectedRating, setSelectedRating] = useState(0);
+      const [sortBy, setSortBy] = useState("featured");
+      const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+      
+       const categoriesWithCounts = useMemo(() => {
+         if (loading || !Array.isArray(products)) return [];
+         const counts = products.reduce((acc, product) => {
+           acc[product.category] = (acc[product.category] || 0) + 1;
+           return acc;
+         }, {});
+         return globalCategories.map(cat => ({
+           ...cat,
+           count: counts[cat.name] || 0
+         })).filter(cat => cat.count > 0); 
+       }, [products, globalCategories, loading]);
+
+      useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const categoryParam = params.get("category");
+        const queryParam = params.get("q");
+
+        if (categoryParam) {
+           setSelectedCategories(prev => prev.includes(categoryParam) ? prev : [...prev, categoryParam]);
+         }
+        if (queryParam) {
+          setSearchQuery(queryParam);
+          setLocalSearchQuery(queryParam);
+        } else {
+          setSearchQuery("");
+          setLocalSearchQuery("");
+        }
+      }, [location.search]); 
+      
+      useEffect(() => {
+        if (loading) return;
         
-        <Button 
-          variant="outline" 
-          className="md:hidden border-shopzone text-shopzone"
-          onClick={() => setIsMobileFilterOpen(true)}
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-        </Button>
-      </div>
+        let result = [...products];
+        
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          result = result.filter(product => 
+            product.name.toLowerCase().includes(query) || 
+            (product.description && product.description.toLowerCase().includes(query)) ||
+             (product.category && product.category.toLowerCase().includes(query)) ||
+             (product.seller && product.seller.toLowerCase().includes(query))
+          );
+        }
+        
+         if (selectedCategories.length > 0) {
+           const selectedCategoryNames = globalCategories
+             .filter(cat => selectedCategories.includes(cat.id))
+             .map(cat => cat.name);
+           
+           if (selectedCategoryNames.length > 0) {
+             result = result.filter(product => selectedCategoryNames.includes(product.category));
+           }
+         }
+        
+        result = result.filter(product => 
+          product.price >= priceRange[0] && product.price <= priceRange[1]
+        );
+        
+        if (selectedRating > 0) {
+          result = result.filter(product => product.rating >= selectedRating);
+        }
+        
+        switch (sortBy) {
+          case "price-low":
+            result.sort((a, b) => a.price - b.price);
+            break;
+          case "price-high":
+            result.sort((a, b) => b.price - a.price);
+            break;
+          case "newest":
+             result.sort((a, b) => {
+                 const dateA = a.createdAt ? new Date(a.createdAt) : 0;
+                 const dateB = b.createdAt ? new Date(b.createdAt) : 0;
+                 return dateB - dateA;
+             });
+            break;
+          case "rating":
+            result.sort((a, b) => b.rating - a.rating);
+            break;
+          case "featured":
+          default:
+            result.sort((a, b) => {
+              if (a.featured && !b.featured) return -1;
+              if (!a.featured && b.featured) return 1;
+              return b.rating - a.rating;
+            });
+            break;
+        }
+        
+        setFilteredProducts(result);
+      }, [products, globalCategories, loading, searchQuery, selectedCategories, priceRange, selectedRating, sortBy]);
       
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Filters - Desktop */}
-        <div className="hidden md:block w-64 space-y-8">
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Filters</h2>
+      const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        setSearchQuery(localSearchQuery);
+        const params = new URLSearchParams(location.search);
+        if (localSearchQuery.trim()) {
+          params.set('q', localSearchQuery.trim());
+        } else {
+          params.delete('q');
+        }
+        navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+      };
+
+      const handleCategoryChange = (categoryId) => {
+        setSelectedCategories(prev => {
+          const newCategories = prev.includes(categoryId) 
+            ? prev.filter(id => id !== categoryId)
+            : [...prev, categoryId];
+          
+          const params = new URLSearchParams(location.search);
+          if (newCategories.length > 0) {
+            // For simplicity, handling single category in URL. Multi-select URL update can be complex.
+            // This example will set the last selected category or clear if none.
+            // For multi-category in URL, you'd join IDs: params.set('category', newCategories.join(','));
+            params.set('category', newCategories[newCategories.length - 1]); 
+          } else {
+            params.delete('category');
+          }
+          navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+          return newCategories;
+        });
+      };
+      
+      const handleRatingChange = (rating) => {
+        setSelectedRating(prev => prev === rating ? 0 : rating);
+      };
+      
+      const handleClearFilters = () => {
+        setLocalSearchQuery("");
+        setSearchQuery("");
+        setSelectedCategories([]);
+        setPriceRange([0, MAX_PRICE]);
+        setSelectedRating(0);
+        setSortBy("featured");
+        navigate(location.pathname, { replace: true }); // Clears all query params
+      };
+      
+      if (loading) {
+        return (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
+        );
+      }
+      
+      return (
+        <motion.div 
+          className="container mx-auto px-4 py-6 md:py-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex justify-between items-center mb-4 md:hidden">
+            <h1 className="text-xl font-semibold text-foreground">Products</h1>
             <Button 
               variant="outline" 
-              className="w-full border-shopzone text-shopzone"
-              onClick={handleClearFilters}
+              size="sm"
+              className="border-primary text-primary h-9"
+              onClick={() => setIsMobileFilterOpen(true)}
             >
-              Clear All Filters
+              <Filter className="h-4 w-4 mr-1.5" />
+              Filters
             </Button>
           </div>
+
+           <div className="hidden md:flex justify-between items-center mb-6">
+             <h1 className="text-2xl font-bold text-foreground">Explore Products</h1>
+              <div className="flex items-center gap-4">
+                <form onSubmit={handleSearchSubmit} className="relative w-72 group">
+                  <motion.div 
+                    className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors"
+                    initial={{ left: '0.75rem' }}
+                    animate={{ left: isSearchFocused ? '0.75rem' : '0.75rem' }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  >
+                    <SearchIcon className="h-full w-full" />
+                  </motion.div>
+                  <Input
+                    type="search"
+                    placeholder={isSearchFocused ? "Find your next favorite..." : "Search products..."}
+                    value={localSearchQuery}
+                    onChange={(e) => setLocalSearchQuery(e.target.value)}
+                    onFocus={() => setIsSearchFocused(true)}
+                    onBlur={() => setIsSearchFocused(false)}
+                    className={cn(
+                      "w-full h-9 pl-10 pr-8 text-sm rounded-full modern-search-input focus:ring-primary focus:border-primary",
+                      isSearchFocused && "bg-background shadow-md border-primary ring-1 ring-primary"
+                    )}
+                  />
+                  {localSearchQuery && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-1/2 -translate-y-1/2 right-1.5 h-6 w-6 text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setLocalSearchQuery('');
+                        if (!searchQuery) handleSearchSubmit({ preventDefault: () => {} }); // Submit empty search if main query is also empty
+                        else setSearchQuery(''); // only clear visual if there was a global search
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      <span className="sr-only">Clear search</span>
+                    </Button>
+                  )}
+                </form>
+                 <ProductSorting sortBy={sortBy} setSortBy={setSortBy} />
+              </div>
+           </div>
           
-          <CategoryFilter 
-            categories={sampleCategories}
-            selectedCategories={selectedCategories}
-            onCategoryChange={handleCategoryChange}
-          />
-          
-          <PriceFilter 
-            priceRange={priceRange}
-            setPriceRange={setPriceRange}
-            maxPrice={maxPrice}
-          />
-          
-          <RatingFilter 
-            selectedRating={selectedRating}
-            onRatingChange={handleRatingChange}
-          />
-        </div>
-        
-        {/* Filters - Mobile */}
-        {isMobileFilterOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden">
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              className="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 overflow-y-auto"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold">Filters</h2>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => setIsMobileFilterOpen(false)}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
+          <div className="flex flex-col md:flex-row gap-6 lg:gap-8">
+            <aside className="hidden md:block w-60 lg:w-64 flex-shrink-0">
+              <div className="sticky top-24 space-y-6"> 
+                 <ProductFilters 
+                   categories={categoriesWithCounts}
+                   selectedCategories={selectedCategories}
+                   onCategoryChange={handleCategoryChange}
+                   priceRange={priceRange}
+                   setPriceRange={setPriceRange}
+                   maxPrice={MAX_PRICE}
+                   selectedRating={selectedRating}
+                   onRatingChange={handleRatingChange}
+                   onClearFilters={handleClearFilters}
+                 />
+              </div>
+            </aside>
+            
+            <MobileFilterDrawer
+              isOpen={isMobileFilterOpen}
+              onClose={() => setIsMobileFilterOpen(false)}
+              categories={categoriesWithCounts}
+              selectedCategories={selectedCategories}
+              onCategoryChange={handleCategoryChange}
+              priceRange={priceRange}
+              setPriceRange={setPriceRange}
+              maxPrice={MAX_PRICE}
+              selectedRating={selectedRating}
+              onRatingChange={handleRatingChange}
+              onClearFilters={handleClearFilters}
+            />
+            
+            <section className="flex-1 min-w-0"> 
+               <div className="flex flex-col sm:flex-row gap-3 mb-4 md:hidden">
+                 <form onSubmit={handleSearchSubmit} className="relative flex-grow group">
+                    <motion.div 
+                      className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors"
+                      initial={{ left: '0.75rem' }}
+                      animate={{ left: isSearchFocused ? '0.75rem' : '0.75rem' }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    >
+                      <SearchIcon className="h-full w-full" />
+                    </motion.div>
+                    <Input
+                      type="search"
+                      placeholder={isSearchFocused ? "Find your next favorite..." : "Search products..."}
+                      value={localSearchQuery}
+                      onChange={(e) => setLocalSearchQuery(e.target.value)}
+                      onFocus={() => setIsSearchFocused(true)}
+                      onBlur={() => setIsSearchFocused(false)}
+                      className={cn(
+                        "w-full h-9 pl-10 pr-8 text-sm rounded-full modern-search-input focus:ring-primary focus:border-primary",
+                        isSearchFocused && "bg-background shadow-md border-primary ring-1 ring-primary"
+                      )}
+                    />
+                    {localSearchQuery && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1/2 -translate-y-1/2 right-1.5 h-6 w-6 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setLocalSearchQuery('');
+                           if (!searchQuery) handleSearchSubmit({ preventDefault: () => {} });
+                           else setSearchQuery('');
+                        }}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        <span className="sr-only">Clear search</span>
+                      </Button>
+                    )}
+                  </form>
+                 <ProductSorting sortBy={sortBy} setSortBy={setSortBy} />
+              </div>
+             
+              <div className="mb-4 text-sm text-muted-foreground">
+                 Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
+                 {searchQuery && <span className="italic"> for "{searchQuery}"</span>}
               </div>
               
-              <div className="space-y-8">
-                <Button 
-                  variant="outline" 
-                  className="w-full border-shopzone text-shopzone"
-                  onClick={handleClearFilters}
-                >
-                  Clear All Filters
-                </Button>
-                
-                <CategoryFilter 
-                  categories={sampleCategories}
-                  selectedCategories={selectedCategories}
-                  onCategoryChange={handleCategoryChange}
-                />
-                
-                <PriceFilter 
-                  priceRange={priceRange}
-                  setPriceRange={setPriceRange}
-                  maxPrice={maxPrice}
-                />
-                
-                <RatingFilter 
-                  selectedRating={selectedRating}
-                  onRatingChange={handleRatingChange}
-                />
-                
-                <div className="pt-4 border-t">
-                  <Button 
-                    className="w-full bg-shopzone hover:bg-shopzone-dark"
-                    onClick={() => setIsMobileFilterOpen(false)}
-                  >
-                    Apply Filters
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
+              <ProductGrid products={filteredProducts} />
+              
+            </section>
           </div>
-        )}
-        
-        {/* Products */}
-        <div className="flex-1">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <div className="w-full sm:w-auto">
-              <Input
-                type="search"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="border-shopzone focus:ring-shopzone"
-              />
-            </div>
-            
-            <div className="w-full sm:w-auto">
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="featured">Featured</SelectItem>
-                  <SelectItem value="price-low">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high">Price: High to Low</SelectItem>
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="mb-4">
-            <p className="text-gray-600">
-              Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
-            </p>
-          </div>
-          
-          <ProductGrid products={filteredProducts} />
-        </div>
-      </div>
-    </div>
-  );
-};
+        </motion.div>
+      );
+    };
 
-export default ProductsPage;
+    export default ProductsPage;
+  

@@ -1,9 +1,11 @@
 
     import React from "react";
-    import { Routes, Route } from "react-router-dom";
+    import { Routes, Route, useLocation } from "react-router-dom";
     import { AnimatePresence } from "framer-motion";
-    import Header from "@/components/Header";
+    import Header from "@/components/header/Header";
     import Footer from "@/components/Footer";
+    import CategoryNavBar from "@/components/header/CategoryNavBar";
+    import BottomNavigation from "@/components/navigation/BottomNavigation"; 
     import HomePage from "@/pages/HomePage";
     import ProductsPage from "@/pages/ProductsPage";
     import ProductDetailPage from "@/pages/ProductDetailPage";
@@ -23,18 +25,24 @@
     import SellerOrdersPage from "@/pages/SellerOrdersPage";
     import SellerOrderDetailPage from "@/pages/SellerOrderDetailPage"; 
     import SellerProductEditPage from "@/pages/SellerProductEditPage";
-    import CustomTshirtPage from "@/pages/CustomTshirtPage"; // New Customization Page
+    import CustomTshirtPage from "@/pages/CustomTshirtPage"; 
+    import PublicShopPage from "@/pages/PublicShopPage";
     import NotFoundPage from "@/pages/NotFoundPage";
     import ProtectedRoute from "@/components/ProtectedRoute";
 
     const App = () => {
+      const location = useLocation();
+      const showCategoryNav = !['/login', '/register', '/seller/create-shop'].includes(location.pathname) && !location.pathname.startsWith('/seller/');
+      
+      const showBottomNav = !['/login', '/register'].includes(location.pathname);
+
       return (
         <div className="flex flex-col min-h-screen bg-background"> 
           <Header />
-          <main className="flex-grow">
+          {showCategoryNav && <CategoryNavBar />} 
+          <main className="flex-grow pb-16 md:pb-0"> 
             <AnimatePresence mode="wait">
               <Routes>
-                {/* Public Routes */}
                 <Route path="/" element={<HomePage />} />
                 <Route path="/products" element={<ProductsPage />} />
                 <Route path="/product/:id" element={<ProductDetailPage />} />
@@ -42,10 +50,9 @@
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/search" element={<SearchPage />} />
-                <Route path="/customize-tshirt" element={<CustomTshirtPage />} /> {/* Added Route */}
-                {/* Add public shop view route later if needed: <Route path="/shop/:shopId" element={<PublicShopPage />} /> */}
+                <Route path="/customize-tshirt" element={<CustomTshirtPage />} /> 
+                <Route path="/shop/:shopId" element={<PublicShopPage />} />
 
-                {/* Buyer Protected Routes */}
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/orders" element={<OrdersPage />} />
@@ -54,12 +61,8 @@
                   <Route path="/become-seller" element={<BecomeSellerPage />} />
                 </Route>
 
-                {/* Seller Protected Routes */}
                  <Route element={<ProtectedRoute requiredRole="seller" />}>
-                    {/* Route for sellers *without* a shop yet */}
                     <Route path="/seller/create-shop" element={<CreateShopPage />} /> 
-                    
-                    {/* Routes requiring a shop */}
                     <Route element={<ProtectedRoute requiredRole="seller" requireShop={true} />}>
                       <Route path="/seller/dashboard" element={<SellerDashboardPage />} />
                       <Route path="/seller/products" element={<SellerProductsPage />} />
@@ -71,12 +74,12 @@
                     </Route>
                  </Route>
                 
-                {/* Catch-all route */}
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </AnimatePresence>
           </main>
-          <Footer />
+          {showBottomNav && <BottomNavigation />} 
+          <Footer /> 
         </div>
       );
     };

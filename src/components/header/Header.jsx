@@ -1,7 +1,7 @@
 
     import React, { useState, useEffect } from "react";
     import { useLocation, useNavigate } from "react-router-dom";
-    import { AnimatePresence } from "framer-motion";
+    import { AnimatePresence, motion } from "framer-motion";
     import { useToast } from "@/components/ui/use-toast";
     import Logo from "@/components/Logo";
     import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +14,7 @@
     const Header = () => {
       const [isMenuOpen, setIsMenuOpen] = useState(false);
       const [searchQuery, setSearchQuery] = useState("");
+      const [isHeaderSearchFocused, setIsHeaderSearchFocused] = useState(false);
       const location = useLocation();
       const navigate = useNavigate();
       const { toast } = useToast();
@@ -30,6 +31,7 @@
           navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
           setSearchQuery("");
           setIsMenuOpen(false); 
+          setIsHeaderSearchFocused(false);
         }
       };
 
@@ -44,20 +46,29 @@
 
       useEffect(() => {
         setIsMenuOpen(false); 
+        setIsHeaderSearchFocused(false);
       }, [location.pathname]);
 
       return (
-        <header className="sticky top-0 z-40 w-full bg-background border-b shadow-sm">
-          <div className="container mx-auto px-4 py-2"> 
-            <div className="flex items-center justify-between gap-4">
+        <header className="sticky top-0 z-40 w-full bg-background/95 border-b backdrop-blur-sm shadow-sm">
+          <div className="container mx-auto px-4"> 
+            <div className="flex items-center justify-between h-16 gap-4">
               <Logo />
               
-              <SearchBar 
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                handleSearch={handleSearch}
-                className="hidden md:flex flex-1 max-w-xl mx-auto" 
-              />
+              <motion.div 
+                className="hidden md:flex flex-1 max-w-xl mx-auto"
+                layout // Animate layout changes for focus
+              >
+                 <SearchBar 
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    handleSearch={handleSearch}
+                    isHeaderSearch={true}
+                    onFocus={() => setIsHeaderSearchFocused(true)}
+                    onBlur={() => setIsHeaderSearchFocused(false)}
+                    isFocused={isHeaderSearchFocused}
+                 />
+              </motion.div>
               
               <div className="flex items-center shrink-0">
                 <DesktopNav 
@@ -74,12 +85,17 @@
               </div>
             </div>
             
-            <SearchBar 
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              handleSearch={handleSearch}
-              className="mt-2 md:hidden" 
-            />
+            <div className="py-2 md:hidden">
+               <SearchBar 
+                 searchQuery={searchQuery}
+                 setSearchQuery={setSearchQuery}
+                 handleSearch={handleSearch}
+                 isHeaderSearch={true} 
+                 onFocus={() => setIsHeaderSearchFocused(true)}
+                 onBlur={() => setIsHeaderSearchFocused(false)}
+                 isFocused={isHeaderSearchFocused}
+               />
+            </div>
           </div>
 
           <AnimatePresence>

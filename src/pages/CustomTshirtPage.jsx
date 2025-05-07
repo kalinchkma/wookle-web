@@ -18,7 +18,8 @@
         text: '',
         textColor: '#000000',
         fontFamily: 'Arial',
-        // Add position, scale later if needed
+        fontSize: 16, 
+        textAlign: 'center', // Added text align state
       });
 
       const handleDesignChange = (newDesignPart) => {
@@ -32,14 +33,15 @@
          }
         
          const customItem = {
-           id: `custom_tshirt_${Date.now()}`, // Unique ID for this custom configuration
+           id: `custom_tshirt_${Date.now()}`, 
            name: `Custom T-Shirt (${tshirtColor})`,
-           price: 24.99, // Example price for custom shirt
+           price: 24.99, 
            quantity: 1,
-           type: 'custom_tshirt', // Identify item type
+           type: 'custom_tshirt', 
            color: tshirtColor,
-           design: design,
-           image: design.imageUrl || '/placeholder-tshirt-icon.svg' // Use uploaded image or a placeholder
+           design: design, // Includes fontSize and textAlign now
+           image: design.imageUrl || '/placeholder-tshirt-icon.svg',
+           cartItemId: `custom_tshirt_${Date.now()}_${Math.random().toString(16).slice(2)}` // More unique ID for cart
          };
          
          addToCart(customItem);
@@ -47,7 +49,7 @@
          
          // Optionally reset design after adding
          // setTshirtColor('#ffffff');
-         // setDesign({ imageUrl: null, text: '', textColor: '#000000', fontFamily: 'Arial' });
+         // setDesign({ imageUrl: null, text: '', textColor: '#000000', fontFamily: 'Arial', fontSize: 16, textAlign: 'center' });
       };
 
       return (
@@ -61,12 +63,12 @@
           </motion.h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-            {/* Preview Area (Larger on large screens) */}
+            {/* Preview Area */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="lg:col-span-2 flex justify-center items-center"
+              className="lg:col-span-2 flex justify-center items-start lg:sticky lg:top-24" // Sticky preview on larger screens
             >
                <TshirtPreview color={tshirtColor} design={design} />
             </motion.div>
